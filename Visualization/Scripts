@@ -1,1 +1,23 @@
+#Visualization
+#utilizing makefile from Omiecinski_CAR_ChIP_exo/ folder
 
+#sort bam files
+make sortbam
+
+#remove duplicated reads for sorted _s.bam
+make rmdup
+
+#index _rumdup.bam files, put _rmdup.bam into a new folder first
+make indexbam
+
+#making bam file into separate stranded .tdf file for IGV visualization. IGVtools from IGV can convert .bedgraph to .tdf, so first separate strand for bam files, then make .bedgraph, then convert to .tdf
+#spearate strand first
+make separatermdup
+
+#transfer new bam file into another folder, convert bam files to bedgraph
+make bamtobedgraph
+
+#same foler, convert to .tdf files. run first line in makefile outside make, then run make converttotdf
+make converttotdf
+
+#tdf files can be loaded to IGV for visualization.
