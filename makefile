@@ -1,6 +1,6 @@
 sortbam:
 	#sort .bam file to _s.bam
-	ls *bam | sed 's/.bam//' | parallel -j 8 --progress --verbose '~/src/samtools sort {}.bam {.}_s'
+	ls *bam | sed 's/.bam//' | parallel -j 8 --progress --verbose '~/src/samtools sort -O BAM {}.bam > {.}_s'
 
 rmdup:
 	#remove duplicated reads for sorted _s.bam
@@ -17,7 +17,7 @@ separatermdup:
 
 bamtobedgraph:
 	#convert bam to bedgraph file
-	ls *bam | sed 's/.bam//' | parallel -j 8 --progress --verbose 'betools genomecov -ibam {}.bam -g ~/ref/mm10.fa.fai -bg > {.}.bedgraph'
+	ls *bam | sed 's/.bam//' | parallel -j 8 --progress --verbose 'bedtools genomecov -ibam {}.bam -g ~/ref/mm10.fa.fai -bg > {.}.bedgraph'
 
 converttotdf:
 	#run the first line outside make, run this again.
@@ -30,4 +30,4 @@ converttotdf:
 
 macs14:
         #call peaks to control.bam, default setting
-        ls *.bam | sed 's/.bam//' | parallel -j 8 --progress --verbose 'macs14 -t {}.bam -c chip_control_rmdup.bam -f BAM -g mm --keep-dup=all -n {.}'
+        ls *.bam | sed 's/.bam//' | parallel -j 8 --progress --verbose 'macs14 -t {}.bam -c chip_control_rmdup.bam -f BAM -g mm -n {.}'
