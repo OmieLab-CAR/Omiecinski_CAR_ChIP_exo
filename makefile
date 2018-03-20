@@ -1,6 +1,6 @@
 sortbam:
 	#sort .bam file to _s.bam
-	ls *bam | sed 's/.bam//' | parallel -j 8 --progress --verbose '~/src/samtools sort -O BAM {}.bam > {.}_s'
+	ls *bam | sed 's/.bam//' | parallel -j 8 --progress --verbose '~/src/samtools sort -O BAM {}.bam > {.}_s.bam'
 
 rmdup:
 	#remove duplicated reads for sorted _s.bam
