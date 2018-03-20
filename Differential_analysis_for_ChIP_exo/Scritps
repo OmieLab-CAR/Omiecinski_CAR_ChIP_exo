@@ -1,1 +1,2 @@
-
+#Differential analysis for ChIP-exo samples.
+#first do a peak calling for each sample, merge the peak bed files to a single bed file containing all potential sites  
