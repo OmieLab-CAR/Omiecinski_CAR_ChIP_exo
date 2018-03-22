@@ -1,2 +1,41 @@
 #Differential analysis for ChIP-exo samples.
 #first do a peak calling for each sample, merge the peak bed files to a single bed file containing all potential sites  
+
+
+#pool direct and indirect activator for mCAR and hCAR, use best four replicates and only make 1 final IDR results for mCAR and hCAR
+#choose 3 high FRiP replicates for each species, 15070402, 15072904, 15091305 for hCAR; 15011804, 15021105, 15021107 for mCAR
+#rmdup from bam
+samtools rmdup 15021105.bam 15021105_rmdup.bam
+#merge
+samtools merge mCAR.bam 15011804_rmdup.bam 15021105_rmdup.bam 15021107_rmdup.bam
+#bamtobed
+bedtools bamtobed -i 61205mm10XO_ab290_CARKO_150913-05_YFR-hCAR_CIT_rmdup.bam > 15091305_hCAR1_CIT_rmdup.bed
+#gzip
+gzip -c hCAR.bed
+#shuffle merge file into two psuedo replicates files
+shuf_2.sh #~/work/Final_IDR_peak
+#use macs2 to call peaks
+ls *gz | sed 's/.bed.gz//' | parallel -j 6 --progress --verbose 'macs2 callpeak -t {}.bed.gz -c chip_exo_control_1_rmdup.bed -f BED -n {.}_IDR -g mm -p 1e-3 --keep-dup all'
+#using IDR Rscript to analyze pooled sample psuedo replicates
+Rscript batch-consistency-analysis.r mCAR_pr1_IDR_peaks.narrowPeak mCAR_pr2_IDR_peaks.narrowPeak -1 mCAR_pr 0 F p.value
+#thresholding overlapped peaks from psuedo replicates or between original. replicates note have to convert space to tab here.
+cat mCAR_pr-overlapped-peaks.txt | tr [:blank:] \\t | awk '($11<=0.01){print $0;}' | wc -l
+#use relax threshold, pick 0.0025 from pooled psuedo pooled replicates number
+cat mCAR_IDR_peaks.narrowPeak | sort -k8nr,8nr | head -n 7598 > mCAR_macs2_IDR_peaks.bed
+cat hCAR_IDR_peaks.narrowPeak | sort -k8nr,8nr | head -n 27996 > hCAR_macs2_IDR_peaks.bed
+#use mm10_black_list_region to trim final peak results
+bedtools intersect -a mCAR_macs2_IDR_peaks.bed -b mm10-blacklist_liftover.bed -v > mCAR_macs2_IDR_peaks.bed.blacklisted
+#use macs14 merge bed file to filter macs2 results once more
+bedtools intersect -a mCAR_macs2_IDR_peaks.bed.blacklisted -b Ben_chip_all_merge.bed -wa -u > mCAR_IDR_peaks_final.bed
+#Homer annotate
+ls *bed | sed 's/.bed//' | parallel -j 4 --progress --verbose 'annotatePeaks.pl {}.bed mm10 -annStats {.}_stats.txt > {.}_anno.txt'
+#filter these regions within 25kb of a gene
+cat mCAR_IDR_peaks_final_anno.txt | tail -n +2 | awk -F'\t' 'function abs(x){return ((x < 0.0) ? -x : x)} {if ( abs($10) < 25000){print $12"\t"$14"\t"$15"\t"$16;}}' > mCAR_IDR_final_gene_list.txt
+#extract gene symbol, refseq and entrez id
+cat mCAR_IDR_final_gene_list.txt  | awk '{print $4;}'| awk '!x[$0]++' > mCAR_IDR_final_gene_symbol.txt
+
+cat mCAR_IDR_final_gene_list.txt  | awk '{print $2;}'| awk '!x[$0]++' > mCAR_IDR_final_gene_RefSeq.txt
+
+cat mCAR_IDR_final_gene_list.txt  | awk '{print $1;}'| awk '!x[$0]++' > mCAR_IDR_final_gene_Entrez.txt
+
+#final list: mCAR: 0.01 IDR threshold, final list 3859 genes, hCAR: 0.0025 treshold, final list 7905 genes for hCAR, 3859 genes for mCAR
