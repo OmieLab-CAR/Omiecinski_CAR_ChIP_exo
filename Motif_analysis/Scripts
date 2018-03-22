@@ -1,1 +1,42 @@
+##primary car binding sites for 4color plot, 5' stacking, TSS localization plot
+##top 1000/500 hCAR or mCAR binding genes, cross-referenced with transcriptome, meme and fimo scan,
+#use homer annotation files, choose 10kb region, with ranks
+cat hCAR_IDR_full_list.txt |  tail -n +2 | awk -F'\t' 'function abs(x){return ((x < 0.0) ? -x : x)} {if ( abs($10) < 10000){print $2"\t"$3"\t"$4"\t"$1"\t"$16"\t"NR;}}' | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"NR;}' | sort -k 5 > hCAR_IDR_bed_gene_rank_10kb.bed
+cat mCAR_IDR_full_list.txt |  tail -n +2 | awk -F'\t' 'function abs(x){return ((x < 0.0) ? -x : x)} {if ( abs($10) < 10000){print $2"\t"$3"\t"$4"\t"$1"\t"$16"\t"NR;}}' | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"NR;}' | sort -k 5 > mCAR_IDR_bed_gene_rank_10kb.bed
+#find overlap gene symbols in transcriptome data
+join -1 1 -2 5 CAR_mRNA_Rodent_All_mm10.txt hCAR_IDR_bed_gene_rank_10kb.bed | tr [:blank:] \\t | sort -nk 6 | awk '{print $2"\t"$3"\t"$4"\t"$5"\t"$1"\t"$6;}' > hCAR_IDR_transcriptome_Rodent_All_10kb_rank.bed
+join -1 1 -2 5 CAR_mRNA_Rodent_All_mm10.txt mCAR_IDR_bed_gene_rank_10kb.bed | tr [:blank:] \\t | sort -nk 6 | awk '{print $2"\t"$3"\t"$4"\t"$5"\t"$1"\t"$6;}' > mCAR_IDR_transcriptome_Rodent_All_10kb_rank.bed
+#merge chip-exo midpoint 80bp file
+cat mCAR_merge_midpoint_normed_filter_s.bed | sort -k1,1 -k2n,2n | bedtools merge -c 5 -o sum -i stdin > mCAR_merge_midpoint_normed_filter_s_merge.bed
+cat hCAR_merge_midpoint_normed_filter_s.bed | sort -k1,1 -k2n,2n | bedtools merge -c 5 -o sum -i stdin > hCAR_merge_midpoint_normed_filter_s_merge.bed
+#get near 1000 beds by intersecting chip_exo with transcriptome existed genes
+cat hCAR_IDR_transcriptome_Rodent_All_10kb_rank.bed | head -n 700 | bedtools intersect -a hCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > hCAR_merge_midpoint_normed_filter_s_merge_Rodent_transcriptome.bed
+cat mCAR_IDR_transcriptome_Rodent_All_10kb_rank.bed | head -n 1000 | bedtools intersect -a mCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > mCAR_merge_midpoint_normed_filter_s_merge_Rodent_transcriptome.bed
+cat mCAR_IDR_transcriptome_Rodent_All_10kb_rank.bed | head -n 430 | bedtools intersect -a mCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > mCAR_merge_midpoint_normed_filter_s_merge_Rodent_transcriptome_500.bed
+cat hCAR_IDR_transcriptome_Rodent_All_10kb_rank.bed | head -n 330 | bedtools intersect -a hCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > hCAR_merge_midpoint_normed_filter_s_merge_Rodent_transcriptome_500.bed
 
+cat mCAR_IDR_bed_gene_rank_10kb.bed | head -n 520 | bedtools intersect -a mCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > mCAR_merge_midpoint_normed_filter_s_merge_bed_500.bed
+cat hCAR_IDR_bed_gene_rank_10kb.bed | head -n 450 | bedtools intersect -a hCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > hCAR_merge_midpoint_normed_filter_s_merge_bed_500.bed
+
+cat hCAR_IDR_transcriptome_All_10kb_rank.bed | head -n 330 | bedtools intersect -a hCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > hCAR_merge_midpoint_normed_filter_s_merge_All_transcriptome.bed
+cat mCAR_IDR_transcriptome_All_10kb_rank.bed | head -n 430 | bedtools intersect -a mCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > mCAR_merge_midpoint_normed_filter_s_merge_All_transcriptome.bed
+
+cat mCAR_IDR_bed_gene_rank_10kb.bed | head -n 1020 | bedtools intersect -a mCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > mCAR_merge_midpoint_normed_filter_s_merge_bed_1000.bed
+cat hCAR_IDR_bed_gene_rank_10kb.bed | head -n 860 | bedtools intersect -a hCAR_merge_midpoint_normed_filter_s_merge.bed -b stdin -wa > hCAR_merge_midpoint_normed_filter_s_merge_bed_1000.bed
+
+#get fasta
+bedtools getfasta -fi ~/Ref/mm10/mm10.fa -bed mCAR_merge_midpoint_normed_filter_s_merge_Rodent_transcriptome.bed -fo mCAR_Rodent_Transcriptome_1000.fa
+bedtools getfasta -fi ~/Ref/mm10/mm10.fa -bed hCAR_merge_midpoint_normed_filter_s_merge_Rodent_transcriptome.bed -fo hCAR_Rodent_Transcriptome_1000.fa
+#invoke meme-chip suite
+meme-chip -oc hCAR_Rodent_Transcriptome_1000 -nmeme 1100  -meme-mod zoops -meme-minw 16 -meme-maxw 20 -meme-maxsize 200000 -centrimo-local -db ~/src/MEME_database/HOCOMOCOv10_HUMAN_mono_meme_format.meme hCAR_Rodent_Transcriptome_1000.fa
+meme-chip -oc mCAR_Rodent_Transcriptome_1000 -nmeme 1100  -meme-mod zoops -meme-minw 16 -meme-maxw 20 -meme-maxsize 200000 -centrimo-local -db ~/src/MEME_database/HOCOMOCOv10_HUMAN_mono_meme_format.meme mCAR_Rodent_Transcriptome_1000.fa
+meme-chip -oc hCAR_Rodent_Transcriptome_500 -nmeme 1100  -meme-mod zoops -meme-minw 16 -meme-maxw 20 -meme-maxsize 200000 -centrimo-local -db ~/src/MEME_database/HOCOMOCOv10_HUMAN_mono_meme_format.meme hCAR_Rodent_Transcriptome_500.fa
+meme-chip -oc mCAR_Rodent_Transcriptome_500 -nmeme 1100  -meme-mod zoops -meme-minw 16 -meme-maxw 20 -meme-maxsize 200000 -centrimo-local -db ~/src/MEME_database/HOCOMOCOv10_HUMAN_mono_meme_format.meme mCAR_Rodent_Transcriptome_500.fa
+#get centrimo bed file
+#input $1.bed, no suffix
+set -ue
+
+INPUT=$1.bed
+OUTPUT="$1"_centrimo.bed
+cat $INPUT | awk 'function ceil(x){return (x==int(x))?x:int(x)+1} {start=($2+$3)/2-250} {end=($2+$3)/2+250} {print $1"\t"ceil(start)"\t"ceil(end)"\t"$4;}' > $OUTPUT
+#
