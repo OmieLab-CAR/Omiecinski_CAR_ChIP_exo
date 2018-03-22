@@ -1,0 +1,2 @@
+bash bed2gtf.sh Ben_chip_all_merge.bed
+featureCounts -T 5 -t exon -p -g gene_id -a ben_chip_all_merge.gtf -o counts.txt ./replicates/*.bam
